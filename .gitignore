@@ -1,0 +1,74 @@
+# ---------------------------------------------------------------------
+# Unity generated folders
+# ---------------------------------------------------------------------
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
+
+# Asset Store tools
+[Aa]ssets/AssetStoreTools*
+
+# Gradle / Android build output
+[Aa]ssets/[Pp]lugins/[Ee]ditor/JetBrains*
+.gradle/
+*.apk
+*.aab
+*.unitypackage
+*.app
+
+# ---------------------------------------------------------------------
+# Visual Studio / Rider / VS Code generated files
+# ---------------------------------------------------------------------
+.vs/
+.vscode/
+.idea/
+ExportedObj/
+.consulo/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# ---------------------------------------------------------------------
+# Unity crash / build reports
+# ---------------------------------------------------------------------
+sysinfo.txt
+crashlytics-build.properties
+/[Bb]uilds/
+/[Aa]ssets/[Ss]treamingAssets/aa.meta
+/[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# ---------------------------------------------------------------------
+# OS files
+# ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------------------------------------------------------------------
+# Secrets — never commit signing keys or store credentials
+# ---------------------------------------------------------------------
+*.keystore
+*.jks
+!/[Aa]ssets/**/*.keystore.meta
+!/[Aa]ssets/**/*.jks.meta
+google-services.json
+GoogleService-Info.plist
+.env
+.env.*
