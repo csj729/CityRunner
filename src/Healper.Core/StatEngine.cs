@@ -36,25 +36,35 @@ namespace Healper.Core
             var outcome = new DailyOutcome { Date = day.Date };
             float rawCoins = 0f;
 
-            for (int i = 0; i < workouts.Count; i++)
+            // 하루에 인정하는 세션 수를 제한한다. 나머지는 기록은 남되 보상은 없다.
+            int counted = Math.Min(workouts.Count, _b.MaxWorkoutsPerDay);
+
+            for (int i = 0; i < counted; i++)
             {
                 WorkoutRecord w = workouts[i];
                 float trust = _b.TrustFactor(w.Trust);
 
                 if (w.Kind == WorkoutKind.Strength)
                 {
-                    rawCoins += (w.Volume / _b.VolumePerCoin) * trust;
-                    outcome.Strength += (w.Volume / _b.VolumePerStrength) * trust;
+                    // 타당성 상한을 먼저 씌운다. 비율 감액만으로는 무제한 입력을 못 막는다.
+                    float volume = Math.Min(w.Volume, _b.MaxVolumePerSession);
+                    rawCoins += (volume / _b.VolumePerCoin) * trust;
+                    outcome.Strength += (volume / _b.VolumePerStrength) * trust;
                 }
                 else
                 {
-                    float load = (float)w.Duration.TotalMinutes * w.Intensity;
+                    float load = Math.Min((float)w.Duration.TotalMinutes * w.Intensity,
+                                          _b.MaxCardioLoadPerSession);
                     rawCoins += load * _b.CoinPerCardioMinute * trust;
                     outcome.Endurance += (load / _b.CardioLoadPerEndurance) * trust;
                 }
 
                 outcome.HasWorkout = true;
             }
+
+            // 볼륨과 무관하게, 그날 운동했다는 사실에 주는 몫(§7.3 Tier0-2).
+            if (outcome.HasWorkout)
+                rawCoins += _b.CoinPerWorkoutDay * _b.TrustFactor(workouts[0].Trust);
 
             if (diet.HasValue)
             {

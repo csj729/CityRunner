@@ -12,6 +12,13 @@ namespace Healper.Core
         Consistent, // 주 4~5회, 식단 거의 매일
         Erratic,    // 주 1~2회, 식단 띄엄띄엄
         Lapsed,     // 초반만 하고 방치
+
+        /// <summary>
+        /// 운동하지 않고 매일 부풀린 수치를 손으로 입력하는 유저.
+        /// 일일 캡과 수동 입력 감액(§7.3)이 실제로 먹히는지 확인하는 대조군이다.
+        /// 이 프로필이 Consistent 를 앞지르면 신뢰 설계가 뚫린 것이다.
+        /// </summary>
+        Cheater,
     }
 
     /// <summary>
@@ -30,6 +37,13 @@ namespace Healper.Core
             for (int d = 0; d < days; d++)
             {
                 DateTime day = start.Date.AddDays(d);
+
+                if (profile == MockProfile.Cheater)
+                {
+                    AddCheatDay(day);
+                    continue;
+                }
+
                 float decay = profile == MockProfile.Lapsed ? Math.Max(0f, 1f - d / 10f) : 1f;
 
                 float workoutChance = BaseWorkoutChance(profile) * decay;
@@ -65,6 +79,24 @@ namespace Healper.Core
                     });
                 }
             }
+        }
+
+        /// <summary>매일, 말도 안 되는 수치를, 전부 수동으로 입력한다.</summary>
+        private void AddCheatDay(DateTime day)
+        {
+            _workouts.Add(WorkoutRecord.Strength(
+                day.AddHours(19), TimeSpan.FromMinutes(90), 25000f, RecordTrust.Manual));
+            _workouts.Add(WorkoutRecord.Cardio(
+                day.AddHours(7), TimeSpan.FromMinutes(120), 2.0f, RecordTrust.Manual));
+
+            _diet.Add(new DietDay
+            {
+                Date = day,
+                MealsLogged = 3,
+                ProteinGoalMet = true,
+                AteAllMainMeals = true,
+                Trust = RecordTrust.Manual,
+            });
         }
 
         public IReadOnlyList<WorkoutRecord> GetWorkouts(DateTime from, DateTime to)

@@ -13,18 +13,41 @@ namespace Healper.Core
     {
         // --- 코인 획득 ---------------------------------------------------
 
+        /// <summary>
+        /// 그날 운동을 했다는 사실 자체에 주는 코인(§7.3 Tier0-2 "누적량이 아니라 연속성").
+        /// 볼륨은 손으로 부풀릴 수 있지만 "며칠 했는가"는 부풀리기 어렵다.
+        /// 그래서 코인의 주된 몫을 빈도에 싣고, 볼륨 비례분은 보조로 둔다.
+        /// </summary>
+        public int CoinPerWorkoutDay = 12;
+
         /// <summary>이만큼의 볼륨(kg x 회 x 세트)당 코인 1개.</summary>
-        public float VolumePerCoin = 500f;
+        public float VolumePerCoin = 1200f;
 
         /// <summary>유산소 1분 x 강도 1.0 당 코인.</summary>
-        public float CoinPerCardioMinute = 0.5f;
+        public float CoinPerCardioMinute = 0.2f;
 
         public int CoinPerMealLogged = 3;
         public int CoinProteinGoalBonus = 8;
         public int CoinRegularityBonus = 5;
 
         /// <summary>하루 코인 상한(§7.3 Tier0-1). 몰아서 입력해도 이득이 없게 한다.</summary>
-        public int DailyCoinCap = 80;
+        public int DailyCoinCap = 45;
+
+        // --- 입력 타당성 상한(§7.3) ---------------------------------------
+        //
+        // 비율 감액(수동 30%)만으로는 무제한 입력을 막지 못한다는 것이 시뮬레이션에서
+        // 확인됐다. 30%를 곱해도 볼륨을 5배로 적으면 그만이기 때문이다.
+        // 그래서 레코드 단위로 생리학적 상한을 둔다. 초중급 유저의 상단을 넉넉히
+        // 잡았으므로 정직한 기록은 걸리지 않는다.
+
+        /// <summary>한 세션에서 인정하는 최대 볼륨. 초중급 상단이 1만 안팎.</summary>
+        public float MaxVolumePerSession = 15000f;
+
+        /// <summary>한 세션에서 인정하는 최대 유산소 부하(분 x 강도).</summary>
+        public float MaxCardioLoadPerSession = 90f;
+
+        /// <summary>하루에 보상으로 인정하는 최대 운동 세션 수.</summary>
+        public int MaxWorkoutsPerDay = 2;
 
         // --- 기록 신뢰도(§7.2) -------------------------------------------
 
@@ -37,8 +60,11 @@ namespace Healper.Core
         /// <summary>이만큼의 볼륨당 근력 1.0.</summary>
         public float VolumePerStrength = 2000f;
 
-        /// <summary>(분 x 강도)가 이만큼 쌓일 때마다 지구력 1.0.</summary>
-        public float CardioLoadPerEndurance = 60f;
+        /// <summary>
+        /// (분 x 강도)가 이만큼 쌓일 때마다 지구력 1.0.
+        /// 60 이었을 때 근력 40.8 대 지구력 5.3 으로 지구력 스탯이 사실상 죽어 있었다.
+        /// </summary>
+        public float CardioLoadPerEndurance = 12f;
 
         public float ConditionPerMeal = 0.15f;
         public float ConditionProteinBonus = 0.4f;

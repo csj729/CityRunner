@@ -77,6 +77,16 @@ namespace Healper.Sim
                 Console.WriteLine("  {0,-11} 오프라인 비중 {1:P0}{2}", profile, offlineShare, note);
             }
             Console.WriteLine();
+
+            // 매일 부풀린 수치를 손으로 넣는 유저가 정직한 유저를 앞지르면
+            // §7.3 신뢰 설계가 뚫린 것이다. 매번 눈으로 찾지 않도록 지표로 둔다.
+            Summary cheat = totals[MockProfile.Cheater];
+            Console.WriteLine("=== 치팅 방어 점검 (§7.3) ===");
+            Compare("활동 코인", cheat.ActivityCoins, top.ActivityCoins);
+            Compare("근력", cheat.Strength, top.Strength);
+            Compare("지구력", cheat.Endurance, top.Endurance);
+            Compare("도달 스테이지", cheat.Stage, top.Stage);
+            Console.WriteLine();
         }
 
         private static Summary RunAveraged(MockProfile profile, Balance balance, DateTime start)
@@ -207,6 +217,14 @@ namespace Healper.Sim
                 Console.WriteLine("  ! 잔고가 총획득의 {0:P0} - 싱크 부족(살 게 없다)", s.CoinsLeft / earned);
 
             Console.WriteLine();
+        }
+
+        private static void Compare(string label, float cheater, float honest)
+        {
+            float ratio = honest > 0f ? cheater / honest : 0f;
+            string verdict = ratio > 1.05f ? "  <- 치터가 앞선다" : "  ok";
+            Console.WriteLine("  {0,-13} 치터 {1,6:F1}  vs  정직 {2,6:F1}   ({3:F2}배){4}",
+                label, cheater, honest, ratio, verdict);
         }
 
         private static float Ratio(float top, float bottom)
