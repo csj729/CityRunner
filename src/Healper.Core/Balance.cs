@@ -67,6 +67,39 @@ namespace Healper.Core
         /// <summary>오프라인 누적 상한 시간. 이 이상 비워둬도 더 안 쌓인다.</summary>
         public float OfflineCapHours = 12f;
 
+        // --- 스테이지 / 전투(§6.1) ---------------------------------------
+
+        public float StageBaseHp = 100f;
+
+        /// <summary>스테이지마다 HP가 몇 배씩 오르는가. 방치형 진행 곡선의 핵심 값.</summary>
+        public float StageHpGrowth = 1.18f;
+
+        public float BaseAttack = 10f;
+        public float AttackPerStrength = 2.0f;
+
+        public float BaseActions = 3f;
+        public float ActionsPerEndurance = 0.5f;
+
+        /// <summary>컨디션 1당 행동 횟수 몇 % 증가(생존 -> 더 오래 때린다).</summary>
+        public float ActionsPerCondition = 0.05f;
+
+        public float StageBaseCoin = 8f;
+        public float StageCoinGrowth = 1.12f;
+
+        public int GemEveryNStages = 5;
+        public int GemPerMilestone = 1;
+
+        /// <summary>한 번에 밀 수 있는 스테이지 상한. 폭주 진행을 막는 안전장치.</summary>
+        public int MaxStagesPerTick = 50;
+
+        // --- 코인 싱크(§5) -----------------------------------------------
+
+        public float GearBaseCost = 50f;
+        public float GearCostGrowth = 1.25f;
+
+        /// <summary>장비 1레벨당 공격력 증가율.</summary>
+        public float GearAttackBonus = 0.08f;
+
         public float TrustFactor(RecordTrust trust)
         {
             switch (trust)

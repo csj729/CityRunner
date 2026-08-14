@@ -38,11 +38,33 @@ namespace Healper.Sim
                 Report(profile, s);
             }
 
+            Summary top = totals[MockProfile.Consistent];
+            Summary bottom = totals[MockProfile.Lapsed];
+
             Console.WriteLine("=== 유저 격차 (§4.4 목표: 약 10배) ===");
-            float best = totals[MockProfile.Consistent].OfflinePerDay;
-            float worst = totals[MockProfile.Lapsed].OfflinePerDay;
-            Console.WriteLine("  꾸준함 {0:F1} 코인/일  vs  방치 {1:F1} 코인/일  ->  {2:F1}배",
-                best, worst, worst > 0 ? best / worst : 0f);
+            Console.WriteLine("  오프라인 배수  {0:F1} vs {1:F1} 코인/일  ->  {2:F1}배",
+                top.OfflinePerDay, bottom.OfflinePerDay, Ratio(top.OfflinePerDay, bottom.OfflinePerDay));
+
+            // 배수만 보면 착시가 생긴다. 실제로 유저가 체감하는 건 총 획득과 도달 스테이지다.
+            float topEarned = top.ActivityCoins + top.OfflineCoins + top.StageCoins;
+            float bottomEarned = bottom.ActivityCoins + bottom.OfflineCoins + bottom.StageCoins;
+            Console.WriteLine("  총 획득 코인   {0:F0} vs {1:F0}  ->  {2:F1}배",
+                topEarned, bottomEarned, Ratio(topEarned, bottomEarned));
+            Console.WriteLine("  도달 스테이지  {0:F1} vs {1:F1}  ->  {2:F1}배",
+                top.Stage, bottom.Stage, Ratio(top.Stage, bottom.Stage));
+            Console.WriteLine();
+
+            // 이 게임의 재화원은 현실 운동이어야 한다(§3). 방치 수급이 활동 수급을
+            // 압도하면 운동할 이유가 사라지므로, 비율을 항상 눈에 보이게 둔다.
+            Console.WriteLine("=== 수급 구조 점검 (§3: 방치 수급이 활동을 압도하면 안 됨) ===");
+            foreach (MockProfile profile in Enum.GetValues(typeof(MockProfile)))
+            {
+                Summary s = totals[profile];
+                float total = s.ActivityCoins + s.OfflineCoins + s.StageCoins;
+                float offlineShare = total > 0f ? s.OfflineCoins / total : 0f;
+                Console.WriteLine("  {0,-11} 오프라인 비중 {1:P0}{2}",
+                    profile, offlineShare, offlineShare > 0.5f ? "   <- 운동보다 방치가 더 이득" : "");
+            }
             Console.WriteLine();
         }
 
@@ -52,7 +74,10 @@ namespace Healper.Sim
             for (int seed = 0; seed < Seeds; seed++)
             {
                 Summary s = Run(profile, balance, start, seed);
-                avg.Coins += s.Coins;
+                avg.ActivityCoins += s.ActivityCoins;
+                avg.OfflineCoins += s.OfflineCoins;
+                avg.StageCoins += s.StageCoins;
+                avg.CoinsLeft += s.CoinsLeft;
                 avg.Strength += s.Strength;
                 avg.Endurance += s.Endurance;
                 avg.Condition += s.Condition;
@@ -62,9 +87,16 @@ namespace Healper.Sim
                 avg.FinalCompliance += s.FinalCompliance;
                 avg.OfflineMultiplier += s.OfflineMultiplier;
                 avg.OfflinePerDay += s.OfflinePerDay;
+                avg.Stage += s.Stage;
+                avg.GearLevel += s.GearLevel;
+                avg.Gems += s.Gems;
+                avg.NextGearCost += s.NextGearCost;
             }
 
-            avg.Coins /= Seeds;
+            avg.ActivityCoins /= Seeds;
+            avg.OfflineCoins /= Seeds;
+            avg.StageCoins /= Seeds;
+            avg.CoinsLeft /= Seeds;
             avg.Strength /= Seeds;
             avg.Endurance /= Seeds;
             avg.Condition /= Seeds;
@@ -74,6 +106,10 @@ namespace Healper.Sim
             avg.FinalCompliance /= Seeds;
             avg.OfflineMultiplier /= Seeds;
             avg.OfflinePerDay /= Seeds;
+            avg.Stage /= Seeds;
+            avg.GearLevel /= Seeds;
+            avg.Gems /= Seeds;
+            avg.NextGearCost /= Seeds;
             return avg;
         }
 
@@ -81,12 +117,24 @@ namespace Healper.Sim
         {
             var source = new MockActivitySource(profile, start, Days, seed);
             var engine = new StatEngine(balance);
+            var progression = new Progression(balance);
             var history = new List<DailyOutcome>();
             var s = new Summary();
 
             for (int d = 0; d < Days; d++)
             {
                 DateTime day = start.AddDays(d);
+
+                // 자리를 비운 동안의 수급은 어제까지의 이행률로 정해진다(§4.4).
+                if (history.Count > 0)
+                {
+                    float c = OfflineProgress.Compliance(Window(history), balance);
+                    float m = OfflineProgress.Multiplier(c, balance);
+                    int offline = OfflineProgress.Accrue(TimeSpan.FromHours(24), m, balance);
+                    progression.AddOfflineCoins(offline);
+                    s.OfflineCoins += offline;
+                }
+
                 var workouts = source.GetWorkouts(day, day.AddDays(1));
 
                 DietDay? diet = null;
@@ -95,8 +143,14 @@ namespace Healper.Sim
 
                 DailyOutcome outcome = engine.EvaluateDay(day, workouts, diet);
                 history.Add(outcome);
+                progression.ApplyDay(outcome);
 
-                s.Coins += outcome.Coins;
+                // 강화 -> 스테이지 -> 보상으로 다시 강화. 이게 코어 루프 한 바퀴다.
+                progression.AutoUpgrade();
+                progression.PushStages();
+                progression.AutoUpgrade();
+
+                s.ActivityCoins += outcome.Coins;
                 s.Strength += outcome.Strength;
                 s.Endurance += outcome.Endurance;
                 s.Condition += outcome.Condition;
@@ -104,41 +158,67 @@ namespace Healper.Sim
                 if (outcome.HasWorkout) s.WorkoutDays++;
                 if (outcome.HasDietLog) s.DietDays++;
 
-                // 이행률은 항상 최근 7일 기준이다.
-                var window = history.GetRange(Math.Max(0, history.Count - 7),
-                                              Math.Min(7, history.Count));
-                s.FinalCompliance = OfflineProgress.Compliance(window, balance);
+                s.FinalCompliance = OfflineProgress.Compliance(Window(history), balance);
             }
 
             s.OfflineMultiplier = OfflineProgress.Multiplier(s.FinalCompliance, balance);
             s.OfflinePerDay = OfflineProgress.Accrue(TimeSpan.FromHours(24), s.OfflineMultiplier, balance);
+
+            s.Stage = progression.State.StageCleared;
+            s.GearLevel = progression.State.GearLevel;
+            s.Gems = progression.State.Gems;
+            s.CoinsLeft = progression.State.Coins;
+            s.StageCoins = progression.CoinsFromStages;
+            s.NextGearCost = progression.GearCost(progression.State.GearLevel);
             return s;
         }
 
         private static void Report(MockProfile profile, Summary s)
         {
+            float earned = s.ActivityCoins + s.OfflineCoins + s.StageCoins;
+
             Console.WriteLine("--- {0} ---", profile);
             Console.WriteLine("  운동한 날      {0,5:F1}/{1}일", s.WorkoutDays, Days);
             Console.WriteLine("  식단 기록      {0,5:F1}/{1}일", s.DietDays, Days);
-            Console.WriteLine("  누적 코인      {0,5:F0}", s.Coins);
             Console.WriteLine("  스탯           근력 {0:F1} / 지구력 {1:F1} / 컨디션 {2:F1}",
                 s.Strength, s.Endurance, s.Condition);
             Console.WriteLine("  최근 이행률    {0:P0}  ->  오프라인 {1:F2}배 ({2:F1} 코인/일)",
                 s.FinalCompliance, s.OfflineMultiplier, s.OfflinePerDay);
+            Console.WriteLine("  도달 스테이지  {0,5:F1}      장비 Lv {1:F1}      결정 {2:F1}",
+                s.Stage, s.GearLevel, s.Gems);
+            Console.WriteLine("  코인 출처      활동 {0:F0} / 오프라인 {1:F0} / 스테이지 {2:F0}  (합 {3:F0})",
+                s.ActivityCoins, s.OfflineCoins, s.StageCoins, earned);
+            Console.WriteLine("  코인 잔고      {0,5:F0}   (다음 장비 {1:F0})", s.CoinsLeft, s.NextGearCost);
 
             if (s.CapHitDays > 0.5f)
                 Console.WriteLine("  ! 일일 캡에 평균 {0:F1}일 걸림 - 캡이 낮거나 획득량이 과하다", s.CapHitDays);
 
+            // §11 P3 성공 기준: 코인이 남아돌지 않는가.
+            if (earned > 0f && s.CoinsLeft > earned * 0.25f)
+                Console.WriteLine("  ! 잔고가 총획득의 {0:P0} - 싱크 부족(살 게 없다)", s.CoinsLeft / earned);
+
             Console.WriteLine();
+        }
+
+        private static float Ratio(float top, float bottom)
+        {
+            return bottom > 0f ? top / bottom : 0f;
+        }
+
+        /// <summary>이행률은 항상 최근 7일 기준이다.</summary>
+        private static List<DailyOutcome> Window(List<DailyOutcome> history)
+        {
+            return history.GetRange(Math.Max(0, history.Count - 7), Math.Min(7, history.Count));
         }
 
         // 시드 평균을 내므로 카운트도 실수로 둔다.
         private sealed class Summary
         {
-            public float Coins;
+            public float ActivityCoins, OfflineCoins, StageCoins, CoinsLeft;
             public float Strength, Endurance, Condition;
             public float WorkoutDays, DietDays, CapHitDays;
             public float FinalCompliance, OfflineMultiplier, OfflinePerDay;
+            public float Stage, GearLevel, Gems, NextGearCost;
         }
     }
 }
