@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <RootNamespace>Healper.Sim</RootNamespace>
+    <AssemblyName>Healper.Sim</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!--
+    Healper.Core 는 프로젝트 파일 없이 소스만 링크한다.
+    UnityEngine 참조가 하나도 없으므로, 나중에 폴더째 Unity 의
+    Assets/Healper/Scripts/Core/ 로 복사하면 그대로 컴파일된다.
+  -->
+  <ItemGroup>
+    <Compile Include="../src/Healper.Core/**/*.cs" LinkBase="Core" />
+  </ItemGroup>
+
+</Project>

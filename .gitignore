@@ -33,6 +33,9 @@ ExportedObj/
 *.csproj
 *.unityproj
 *.sln
+
+# ...but the simulator's project file is hand-written, not Unity-generated.
+!sim/*.csproj
 *.suo
 *.tmp
 *.user
