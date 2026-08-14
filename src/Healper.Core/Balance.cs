@@ -61,8 +61,20 @@ namespace Healper.Core
         /// <summary>이행률에서 운동이 차지하는 비중(나머지는 식단).</summary>
         public float ComplianceWorkoutWeight = 0.6f;
 
-        /// <summary>오프라인 시간당 기본 코인.</summary>
-        public float OfflineCoinPerHour = 4f;
+        /// <summary>
+        /// 오프라인 한 사이클이 최근 활동 수급의 몇 %인가.
+        ///
+        /// 여기가 절대 상수였을 때 오프라인 수급이 활동 수급을 5배 압도했다(§3 구조 충돌).
+        /// 활동 수급에 비례시키면, 운동을 안 할 때 오프라인 수급도 같이 말라붙는다.
+        /// 1.0 을 넘기면 "운동보다 방치가 이득"으로 되돌아가므로 넘기지 말 것.
+        /// </summary>
+        public float OfflineShareOfActivity = 0.5f;
+
+        /// <summary>
+        /// 활동이 0이어도 이만큼은 보장한다. 0으로 두면 이탈한 유저의 복귀 유인이
+        /// 사라진다 - 진행 상실은 이탈의 최대 원인이다.
+        /// </summary>
+        public float OfflineMinPerCycle = 5f;
 
         /// <summary>오프라인 누적 상한 시간. 이 이상 비워둬도 더 안 쌓인다.</summary>
         public float OfflineCapHours = 12f;

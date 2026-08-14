@@ -62,8 +62,19 @@ namespace Healper.Sim
                 Summary s = totals[profile];
                 float total = s.ActivityCoins + s.OfflineCoins + s.StageCoins;
                 float offlineShare = total > 0f ? s.OfflineCoins / total : 0f;
-                Console.WriteLine("  {0,-11} 오프라인 비중 {1:P0}{2}",
-                    profile, offlineShare, offlineShare > 0.5f ? "   <- 운동보다 방치가 더 이득" : "");
+
+                // 활동이 거의 없는 유저는 최소 보장(OfflineMinPerCycle)이 비중을 채운다.
+                // 이건 복귀 유인이라는 의도된 동작이므로 구조 문제와 구분해서 표시한다.
+                float activityPerDay = s.ActivityCoins / Days;
+                string note = "";
+                if (offlineShare > 0.5f)
+                {
+                    note = activityPerDay >= balance.OfflineMinPerCycle
+                        ? "   <- 운동보다 방치가 더 이득 (구조 문제)"
+                        : "   (활동이 거의 없어 최소 보장이 지배 - 의도된 복귀 유인)";
+                }
+
+                Console.WriteLine("  {0,-11} 오프라인 비중 {1:P0}{2}", profile, offlineShare, note);
             }
             Console.WriteLine();
         }
@@ -125,12 +136,10 @@ namespace Healper.Sim
             {
                 DateTime day = start.AddDays(d);
 
-                // 자리를 비운 동안의 수급은 어제까지의 이행률로 정해진다(§4.4).
+                // 자리를 비운 동안의 수급은 어제까지의 활동과 이행률로 정해진다(§4.4).
                 if (history.Count > 0)
                 {
-                    float c = OfflineProgress.Compliance(Window(history), balance);
-                    float m = OfflineProgress.Multiplier(c, balance);
-                    int offline = OfflineProgress.Accrue(TimeSpan.FromHours(24), m, balance);
+                    int offline = OfflineProgress.Accrue(TimeSpan.FromHours(24), Window(history), balance);
                     progression.AddOfflineCoins(offline);
                     s.OfflineCoins += offline;
                 }
@@ -162,7 +171,7 @@ namespace Healper.Sim
             }
 
             s.OfflineMultiplier = OfflineProgress.Multiplier(s.FinalCompliance, balance);
-            s.OfflinePerDay = OfflineProgress.Accrue(TimeSpan.FromHours(24), s.OfflineMultiplier, balance);
+            s.OfflinePerDay = OfflineProgress.Accrue(TimeSpan.FromHours(24), Window(history), balance);
 
             s.Stage = progression.State.StageCleared;
             s.GearLevel = progression.State.GearLevel;

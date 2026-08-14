@@ -40,11 +40,36 @@ namespace Healper.Core
                  + (b.OfflineMultiplierMax - b.OfflineMultiplierMin) * Clamp01(compliance);
         }
 
-        /// <summary>자리를 비운 동안 쌓인 코인.</summary>
-        public static int Accrue(TimeSpan away, float multiplier, Balance b, float facilityMultiplier = 1f)
+        /// <summary>최근 7일의 활동 코인 일평균. 오프라인 기본치의 근거가 된다.</summary>
+        public static float RecentDailyActivityCoins(IReadOnlyList<DailyOutcome> last7Days)
         {
-            double hours = Math.Min(away.TotalHours, b.OfflineCapHours);
-            return (int)Math.Round(hours * b.OfflineCoinPerHour * multiplier * facilityMultiplier);
+            if (last7Days.Count == 0) return 0f;
+
+            int sum = 0;
+            for (int i = 0; i < last7Days.Count; i++) sum += last7Days[i].Coins;
+            return (float)sum / last7Days.Count;
+        }
+
+        /// <summary>
+        /// 자리를 비운 동안 쌓인 코인.
+        ///
+        ///   한 사이클 = 최근 활동 일평균 x OfflineShareOfActivity x 이행률배수 x 시설배수
+        ///
+        /// 기본치를 활동에서 유도하는 것이 핵심이다. 절대 상수로 두면 운동과 무관하게
+        /// 재화가 쌓여, 이 게임의 전제(재화원은 현실 운동)가 무너진다.
+        /// </summary>
+        public static int Accrue(TimeSpan away, IReadOnlyList<DailyOutcome> last7Days, Balance b,
+                                 float facilityMultiplier = 1f)
+        {
+            float perCycle = RecentDailyActivityCoins(last7Days) * b.OfflineShareOfActivity;
+            if (perCycle < b.OfflineMinPerCycle) perCycle = b.OfflineMinPerCycle;
+
+            float multiplier = Multiplier(Compliance(last7Days, b), b);
+
+            // 사이클을 얼마나 채웠는지. 상한을 넘긴 시간은 버린다.
+            double filled = Math.Min(away.TotalHours, b.OfflineCapHours) / b.OfflineCapHours;
+
+            return (int)Math.Round(perCycle * filled * multiplier * facilityMultiplier);
         }
 
         private static float Clamp01(float v)
