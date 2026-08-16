@@ -22,7 +22,10 @@ namespace Healper.Core
 
         public static float AttackPower(PlayerState p, Balance b)
         {
-            return (b.BaseAttack + p.Strength * b.AttackPerStrength)
+            // 지구력이 기본 축, 근력은 상한 있는 가속기(비대칭 설계).
+            float fromStrength = Math.Min(p.Strength, b.StrengthAttackCap) * b.AttackPerStrength;
+
+            return (b.BaseAttack + p.Endurance * b.AttackPerEndurance + fromStrength)
                  * (1f + p.GearLevel * b.GearAttackBonus);
         }
 

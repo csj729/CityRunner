@@ -46,9 +46,11 @@ namespace Healper.Core
 
                 if (w.Kind == WorkoutKind.Strength)
                 {
-                    // 타당성 상한을 먼저 씌운다. 비율 감액만으로는 무제한 입력을 못 막는다.
+                    // 웨이트는 코인을 볼륨에 비례해 주지 않는다(비대칭 설계).
+                    // 중량은 어떤 센서로도 검증할 수 없어, 게임 경제와 분리해 둔다.
+                    // 타당성 상한을 먼저 씌운다 - 비율 감액만으로는 무제한 입력을 못 막는다.
                     float volume = Math.Min(w.Volume, _b.MaxVolumePerSession);
-                    rawCoins += (volume / _b.VolumePerCoin) * trust;
+                    rawCoins += _b.CoinPerStrengthSession * trust;
                     outcome.Strength += (volume / _b.VolumePerStrength) * trust;
                 }
                 else
@@ -61,6 +63,10 @@ namespace Healper.Core
 
                 outcome.HasWorkout = true;
             }
+
+            // 검증 수단이 없는 근력은 하루 단위로 상승폭을 가둔다.
+            if (outcome.Strength > _b.StrengthStatDailyCap)
+                outcome.Strength = _b.StrengthStatDailyCap;
 
             // 볼륨과 무관하게, 그날 운동했다는 사실에 주는 몫(§7.3 Tier0-2).
             if (outcome.HasWorkout)

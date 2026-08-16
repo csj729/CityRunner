@@ -14,6 +14,13 @@ namespace Healper.Core
         Lapsed,     // 초반만 하고 방치
 
         /// <summary>
+        /// 워치 없이 폰만 쓰고 유산소만 하는 유저. Consistent 와 같은 빈도로 움직인다.
+        /// 비대칭 설계의 전제 - "웨이트를 전혀 하지 않아도 완주할 수 있다" - 가
+        /// 지켜지는지 확인하는 대조군이다.
+        /// </summary>
+        CardioOnly,
+
+        /// <summary>
         /// 운동하지 않고 매일 부풀린 수치를 손으로 입력하는 유저.
         /// 일일 캡과 수동 입력 감액(§7.3)이 실제로 먹히는지 확인하는 대조군이다.
         /// 이 프로필이 Consistent 를 앞지르면 신뢰 설계가 뚫린 것이다.
@@ -52,7 +59,7 @@ namespace Healper.Core
                 if (rng.NextDouble() < workoutChance)
                 {
                     // 웨이트와 유산소를 섞는다. 실제 유저도 한쪽만 하지는 않는다.
-                    if (rng.NextDouble() < 0.6)
+                    if (rng.NextDouble() < StrengthShare(profile))
                     {
                         float volume = 6000f + (float)rng.NextDouble() * 6000f;
                         _workouts.Add(WorkoutRecord.Strength(
@@ -117,11 +124,18 @@ namespace Healper.Core
             return result;
         }
 
+        /// <summary>운동한 날 중 웨이트를 고를 확률. CardioOnly 는 웨이트를 하지 않는다.</summary>
+        private static float StrengthShare(MockProfile p)
+        {
+            return p == MockProfile.CardioOnly ? 0f : 0.6f;
+        }
+
         private static float BaseWorkoutChance(MockProfile p)
         {
             switch (p)
             {
-                case MockProfile.Consistent: return 0.65f;
+                case MockProfile.Consistent:
+                case MockProfile.CardioOnly: return 0.65f;
                 case MockProfile.Erratic: return 0.22f;
                 default: return 0.60f; // Lapsed 는 decay 가 깎아 내린다
             }
@@ -131,7 +145,8 @@ namespace Healper.Core
         {
             switch (p)
             {
-                case MockProfile.Consistent: return 0.90f;
+                case MockProfile.Consistent:
+                case MockProfile.CardioOnly: return 0.90f;
                 case MockProfile.Erratic: return 0.35f;
                 default: return 0.85f;
             }
@@ -143,6 +158,9 @@ namespace Healper.Core
         /// </summary>
         private static RecordTrust PickTrust(Random rng, MockProfile p)
         {
+            // 유산소만 하는 유저는 폰이 알아서 기록하므로 사후 입력이 거의 없다.
+            if (p == MockProfile.CardioOnly) return RecordTrust.Automatic;
+
             double auto = p == MockProfile.Consistent ? 0.75 : 0.35;
             return rng.NextDouble() < auto ? RecordTrust.ActivelyRecorded : RecordTrust.Manual;
         }
