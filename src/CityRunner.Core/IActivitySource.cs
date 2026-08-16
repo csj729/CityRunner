@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>
     /// 게임이 활동 데이터를 읽는 유일한 통로. 구현체는 두 개다.

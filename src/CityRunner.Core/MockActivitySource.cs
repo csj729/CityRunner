@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>
     /// 밸런싱용 유저 유형. 꾸준한 유저와 방치 유저의 격차가 실제로 벌어지는지

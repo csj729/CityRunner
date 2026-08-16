@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>
     /// 오프라인 진행(§4.4).

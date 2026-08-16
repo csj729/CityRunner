@@ -1,6 +1,6 @@
 using System;
 
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>운동 종류. 스탯 3종(§4.2) 중 근력/지구력에 각각 대응한다.</summary>
     public enum WorkoutKind

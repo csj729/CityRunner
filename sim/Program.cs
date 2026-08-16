@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
-using Healper.Core;
+using CityRunner.Core;
 
-namespace Healper.Sim
+namespace CityRunner.Sim
 {
     /// <summary>
     /// 코어 루프를 기기 없이 돌려보는 밸런싱 시뮬레이터.
@@ -27,7 +27,7 @@ namespace Healper.Sim
             var balance = new Balance();
             var start = new DateTime(2026, 1, 1);
 
-            Console.WriteLine("Healper 코어 루프 시뮬레이션 - {0}일 x 시드 {1}개 평균", Days, Seeds);
+            Console.WriteLine("CityRunner 코어 루프 시뮬레이션 - {0}일 x 시드 {1}개 평균", Days, Seeds);
             Console.WriteLine();
 
             var totals = new Dictionary<MockProfile, Summary>();

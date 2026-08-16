@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>하루치 활동을 환산한 결과.</summary>
     public struct DailyOutcome

@@ -1,4 +1,4 @@
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>
     /// 밸런싱 상수 전부. 숫자는 여기에만 존재한다.

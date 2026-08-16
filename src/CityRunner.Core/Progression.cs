@@ -1,6 +1,6 @@
 using System;
 
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>유저의 영속 상태. 저장/불러오기 대상이 되는 값들.</summary>
     public sealed class PlayerState

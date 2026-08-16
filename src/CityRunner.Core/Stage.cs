@@ -1,6 +1,6 @@
 using System;
 
-namespace Healper.Core
+namespace CityRunner.Core
 {
     /// <summary>
     /// 스테이지 테이블과 전투 판정(§6.1 방치형 오토배틀러).
