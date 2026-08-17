@@ -26,8 +26,20 @@ namespace CityRunner.Core
         /// 게임 진행의 연료는 유산소와 식단이다. 이 둘은 폰만으로 자동 기록되고
         /// GPS/케이던스/칼로리로 교차검증되기 때문이다. 센서로 검증할 수 없는
         /// 인풋은 애초에 게임에 들이지 않는다(§4.2.1).
+        ///
+        /// 0.2 였을 때 활동 코인이 부하에만 달려 있어, 느리게 오래 뛰는 쪽이 빠른
+        /// 쪽보다 더 벌었다. 절반을 CoinPerSpeedOver 로 옮겼다.
         /// </summary>
-        public float CoinPerCardioMinute = 0.2f;
+        public float CoinPerCardioMinute = 0.08f;
+
+        /// <summary>
+        /// 바닥 속도(StrengthSpeedFloor) 초과분 1km/h 당 코인.
+        ///
+        /// 속도를 코인에 연결하는 유일한 통로다. 값은 근력이 쓰는 것과 정확히 같다 -
+        /// 상한(MaxSpeedKmh)·하루 1세션·최소 세션 시간을 이미 통과한 뒤의 수치이므로,
+        /// 코인에 연결해도 §7.3 조작 방어를 다시 설계할 필요가 없다.
+        /// </summary>
+        public float CoinPerSpeedOver = 3.5f;
 
         public int CoinPerMealLogged = 3;
         public int CoinProteinGoalBonus = 8;

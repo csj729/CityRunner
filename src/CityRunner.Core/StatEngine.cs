@@ -80,7 +80,14 @@ namespace CityRunner.Core
 
             float over = bestSpeed - _b.StrengthSpeedFloor;
             if (over > 0f)
+            {
                 outcome.Strength = (over / _b.SpeedPerStrength) * bestSpeedTrust;
+
+                // 코인에도 속도 몫을 준다. 근력과 정확히 같은 값을 재사용하는 것이
+                // 핵심이다 - 이미 속도 상한·하루 1세션·최소 시간 세 가드를 통과한
+                // 값이라, 코인에 연결해도 새로 열리는 조작 통로가 없다(§7.3).
+                rawCoins += over * _b.CoinPerSpeedOver * bestSpeedTrust;
+            }
 
             // 부하와 무관하게, 그날 운동했다는 사실에 주는 몫(§7.3 Tier0-2).
             if (outcome.HasWorkout)
