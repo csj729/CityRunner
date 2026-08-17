@@ -22,7 +22,7 @@ namespace CityRunner.Core
 
         public static float AttackPower(PlayerState p, Balance b)
         {
-            // 지구력이 기본 축, 근력은 상한 있는 가속기(§4.2.1).
+            // 근력(속도)이 공격력의 주축. 상한은 장기 플레이용 방벽이다(§4.2.1).
             float fromStrength = Math.Min(p.Strength, b.StrengthAttackCap) * b.AttackPerStrength;
 
             return (b.BaseAttack + p.Endurance * b.AttackPerEndurance + fromStrength)

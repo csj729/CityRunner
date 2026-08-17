@@ -141,24 +141,25 @@ namespace CityRunner.Core
         public float BaseAttack = 10f;
 
         /// <summary>
-        /// 지구력이 공격력에 기여하는 몫. 빠르게 뛰지 못해도 완주할 수 있도록
-        /// 바닥을 깔아주는 역할이다.
+        /// 지구력이 공격력에 기여하는 몫. 작게 유지해야 한다 - 지구력은 이미 행동
+        /// 횟수를 지배하므로, 공격력까지 크게 잡으면 제곱으로 작용해 오래 뛰는 쪽이
+        /// 압도한다(0.3 이었을 때 느린 러너가 빠른 러너를 앞질렀다).
         ///
-        /// 작게 유지해야 한다. 지구력은 이미 행동 횟수를 지배하므로, 공격력까지 크게
-        /// 잡으면 제곱으로 작용해 오래 뛰는 쪽이 압도한다(실제로 그렇게 됐었다).
+        /// 느린 러너의 완주는 이 값이 아니라 행동 횟수가 보장한다.
         /// </summary>
-        public float AttackPerEndurance = 0.3f;
+        public float AttackPerEndurance = 0.15f;
 
         /// <summary>
-        /// 근력이 공격력에 기여하는 몫. 지구력이 기본 축이고 근력은 가속기다.
+        /// 근력이 공격력에 기여하는 몫. 공격력의 주축이다 - 속도 차이가 진행에
+        /// 드러나는 것은 이 계수를 통해서다(§4.2.1 선 2번).
         /// </summary>
-        public float AttackPerStrength = 2.0f;
+        public float AttackPerStrength = 4.0f;
 
         /// <summary>
         /// 공격력에 반영되는 근력의 상한. 빠르게 뛴다고 무한히 세지지 않는다.
-        /// 속도 하나가 진행을 지배하지 못하게 막는 마지막 방벽.
+        /// 28일 기준으로는 아무도 닿지 않는다 - 장기 플레이용 방벽이다.
         /// </summary>
-        public float StrengthAttackCap = 40f;
+        public float StrengthAttackCap = 60f;
 
         public float BaseActions = 3f;
         public float ActionsPerEndurance = 0.5f;
