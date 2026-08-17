@@ -2,13 +2,6 @@ using System;
 
 namespace CityRunner.Core
 {
-    /// <summary>운동 종류. 스탯 3종(§4.2) 중 근력/지구력에 각각 대응한다.</summary>
-    public enum WorkoutKind
-    {
-        Strength, // 웨이트·저항운동 -> 근력
-        Cardio,   // 유산소         -> 지구력
-    }
-
     /// <summary>
     /// 기록이 어떻게 만들어졌는지. §7.2 재화 지급률 차등의 근거이자
     /// Health Connect / HealthKit 의 recordingMethod 를 그대로 옮긴 값이다.
@@ -20,36 +13,46 @@ namespace CityRunner.Core
         ActivelyRecorded, // 세션을 실시간으로 측정
     }
 
-    /// <summary>운동 1건.</summary>
+    /// <summary>
+    /// 운동 1건. 종류 구분이 없는 것은 누락이 아니라 설계다(§4.2.1).
+    /// 센서로 검증할 수 있는 활동만 게임에 들이므로, 남는 것은 유산소 세션뿐이다.
+    /// </summary>
     public struct WorkoutRecord
     {
         public DateTime Start;
         public TimeSpan Duration;
-        public WorkoutKind Kind;
 
-        /// <summary>Strength 전용: 총 볼륨(중량 x 횟수 x 세트). Cardio 는 0.</summary>
-        public float Volume;
+        /// <summary>
+        /// 이동 거리. 속도(= 거리 / 시간)를 통해 근력 스탯의 인풋이 된다(§4.2.1).
+        /// Health Connect 의 DistanceRecord 에 대응한다.
+        /// </summary>
+        public float DistanceKm;
 
-        /// <summary>Cardio 전용: 강도 배수(1.0 저강도 ~ 2.0 고강도). Strength 는 0.</summary>
+        /// <summary>강도 배수(1.0 저강도 ~ 2.0 고강도). 지구력 스탯의 인풋(§4.2.2).</summary>
         public float Intensity;
 
         public RecordTrust Trust;
 
-        public static WorkoutRecord Strength(DateTime start, TimeSpan dur, float volume, RecordTrust trust)
+        /// <summary>
+        /// 평균 속도(km/h). 근력은 이 값만 본다 - 시간은 곱하지 않는다(§4.2.1).
+        /// 시간을 곱하면 지구력과 같은 것을 두 번 재게 된다.
+        /// </summary>
+        public float SpeedKmh
         {
-            return new WorkoutRecord
+            get
             {
-                Start = start, Duration = dur, Kind = WorkoutKind.Strength,
-                Volume = volume, Intensity = 0f, Trust = trust,
-            };
+                double hours = Duration.TotalHours;
+                return hours <= 0d ? 0f : (float)(DistanceKm / hours);
+            }
         }
 
-        public static WorkoutRecord Cardio(DateTime start, TimeSpan dur, float intensity, RecordTrust trust)
+        public static WorkoutRecord Cardio(
+            DateTime start, TimeSpan dur, float distanceKm, float intensity, RecordTrust trust)
         {
             return new WorkoutRecord
             {
-                Start = start, Duration = dur, Kind = WorkoutKind.Cardio,
-                Volume = 0f, Intensity = intensity, Trust = trust,
+                Start = start, Duration = dur, DistanceKm = distanceKm,
+                Intensity = intensity, Trust = trust,
             };
         }
     }

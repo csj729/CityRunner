@@ -15,31 +15,19 @@ namespace CityRunner.Core
 
         /// <summary>
         /// 그날 운동을 했다는 사실 자체에 주는 코인(§7.3 Tier0-2 "누적량이 아니라 연속성").
-        /// 볼륨은 손으로 부풀릴 수 있지만 "며칠 했는가"는 부풀리기 어렵다.
-        /// 그래서 코인의 주된 몫을 빈도에 싣고, 볼륨 비례분은 보조로 둔다.
+        /// 시간·거리는 손으로 부풀릴 수 있지만 "며칠 했는가"는 부풀리기 어렵다.
+        /// 그래서 코인의 주된 몫을 빈도에 싣고, 부하 비례분은 보조로 둔다.
         /// </summary>
         public int CoinPerWorkoutDay = 12;
 
         /// <summary>
         /// 유산소 1분 x 강도 1.0 당 코인.
         ///
-        /// 비대칭 설계: 게임 진행의 연료는 유산소와 식단이다. 이 둘은 폰만으로
-        /// 자동 기록되고 GPS/케이던스/칼로리로 교차검증되기 때문이다.
-        /// 웨이트는 볼륨 비례 코인을 주지 않는다 - 중량은 Health Connect 에 아예
-        /// 없는 데이터라 어떤 센서로도 검증할 수 없고, 부정확한 입력이 게임 경제를
-        /// 오염시키는 통로가 된다. 웨이트는 근력 스탯만 올린다.
+        /// 게임 진행의 연료는 유산소와 식단이다. 이 둘은 폰만으로 자동 기록되고
+        /// GPS/케이던스/칼로리로 교차검증되기 때문이다. 센서로 검증할 수 없는
+        /// 인풋은 애초에 게임에 들이지 않는다(§4.2.1).
         /// </summary>
         public float CoinPerCardioMinute = 0.2f;
-
-        /// <summary>
-        /// 웨이트 세션 1회당 고정 코인. 볼륨과 무관하다.
-        ///
-        /// 유산소 한 세션의 평균 코인과 비슷하게 맞춘다. 비대칭 설계의 목적은
-        /// "웨이트 없이도 완주 가능"이지 "웨이트를 하면 손해"가 아니다.
-        /// 웨이트와 유산소의 차이는 받는 양이 아니라 오르는 스탯이어야 한다.
-        /// 고정값이므로 볼륨을 부풀려도 코인은 늘지 않는다.
-        /// </summary>
-        public float CoinPerStrengthSession = 10f;
 
         public int CoinPerMealLogged = 3;
         public int CoinProteinGoalBonus = 8;
@@ -51,15 +39,23 @@ namespace CityRunner.Core
         // --- 입력 타당성 상한(§7.3) ---------------------------------------
         //
         // 비율 감액(수동 30%)만으로는 무제한 입력을 막지 못한다는 것이 시뮬레이션에서
-        // 확인됐다. 30%를 곱해도 볼륨을 5배로 적으면 그만이기 때문이다.
+        // 확인됐다. 30%를 곱해도 수치를 5배로 적으면 그만이기 때문이다.
         // 그래서 레코드 단위로 생리학적 상한을 둔다. 초중급 유저의 상단을 넉넉히
         // 잡았으므로 정직한 기록은 걸리지 않는다.
 
-        /// <summary>한 세션에서 인정하는 최대 볼륨. 초중급 상단이 1만 안팎.</summary>
-        public float MaxVolumePerSession = 15000f;
+        /// <summary>
+        /// 근력에 반영하는 최대 속도(km/h). §2 가 타깃을 초중급으로 잡았고,
+        /// 그 상단이 14 안팎(4'20"/km)이다. §7.3 "비현실적 속도 이상치 탐지"의
+        /// 하드 상한 역할도 겸한다.
+        /// </summary>
+        public float MaxSpeedKmh = 14f;
 
-        /// <summary>한 세션에서 인정하는 최대 유산소 부하(분 x 강도).</summary>
-        public float MaxCardioLoadPerSession = 90f;
+        /// <summary>
+        /// 하루에 인정하는 최대 유산소 부하(분 x 강도). 세션당이 아니라 하루 단위인
+        /// 이유: 세션당 상한은 "세션을 여러 개 적기"로 그냥 우회된다. 하루 90은
+        /// 고강도 한 세션(45분 x 2.0)에 해당하고, 정직한 초중급 기록은 닿지 않는다.
+        /// </summary>
+        public float MaxCardioLoadPerDay = 90f;
 
         /// <summary>하루에 보상으로 인정하는 최대 운동 세션 수.</summary>
         public int MaxWorkoutsPerDay = 2;
@@ -72,18 +68,27 @@ namespace CityRunner.Core
 
         // --- 스탯 상승 ---------------------------------------------------
 
-        /// <summary>이만큼의 볼륨당 근력 1.0.</summary>
-        public float VolumePerStrength = 2000f;
+        /// <summary>
+        /// 근력이 붙기 시작하는 속도(km/h). 이 아래는 근력 0이다.
+        /// 걷기(약 5)를 제외해 "빠르면 많이, 느리면 적게"의 바닥을 만든다.
+        /// </summary>
+        public float StrengthSpeedFloor = 5f;
+
+        /// <summary>바닥 초과분이 이만큼일 때마다 근력 1.0.</summary>
+        public float SpeedPerStrength = 1.6f;
 
         /// <summary>
-        /// 하루에 오를 수 있는 근력 상한. 웨이트는 검증 수단이 없으므로
-        /// 영향 범위를 하루 단위로 격리한다.
+        /// 근력을 인정하는 최소 세션 시간(분).
+        ///
+        /// 근력은 속도만 보고 시간을 곱하지 않는다(§4.2.1). 그래서 가드가 없으면
+        /// 2분 전력질주를 매일 반복하는 것이 최적 전략이 된다. 그건 건강 앱이
+        /// 권해서는 안 되는 행동이다.
         /// </summary>
-        public float StrengthStatDailyCap = 4f;
+        public float MinStrengthSessionMinutes = 10f;
 
         /// <summary>
         /// (분 x 강도)가 이만큼 쌓일 때마다 지구력 1.0.
-        /// 60 이었을 때 근력 40.8 대 지구력 5.3 으로 지구력 스탯이 사실상 죽어 있었다.
+        /// 60 이었을 때 지구력이 근력에 밀려 사실상 죽어 있었다.
         /// </summary>
         public float CardioLoadPerEndurance = 12f;
 
@@ -136,20 +141,22 @@ namespace CityRunner.Core
         public float BaseAttack = 10f;
 
         /// <summary>
-        /// 지구력이 공격력에 기여하는 몫. 웨이트를 전혀 하지 않아도 완주할 수 있도록
+        /// 지구력이 공격력에 기여하는 몫. 빠르게 뛰지 못해도 완주할 수 있도록
         /// 바닥을 깔아주는 역할이다.
         ///
         /// 작게 유지해야 한다. 지구력은 이미 행동 횟수를 지배하므로, 공격력까지 크게
-        /// 잡으면 제곱으로 작용해 유산소만 하는 쪽이 압도한다(실제로 그렇게 됐었다).
+        /// 잡으면 제곱으로 작용해 오래 뛰는 쪽이 압도한다(실제로 그렇게 됐었다).
         /// </summary>
         public float AttackPerEndurance = 0.3f;
 
-        /// <summary>근력이 공격력에 기여하는 몫. 공격력의 주축이다.</summary>
+        /// <summary>
+        /// 근력이 공격력에 기여하는 몫. 지구력이 기본 축이고 근력은 가속기다.
+        /// </summary>
         public float AttackPerStrength = 2.0f;
 
         /// <summary>
-        /// 공격력에 반영되는 근력의 상한. 웨이트를 많이 한다고 무한히 세지지 않는다.
-        /// 검증 불가능한 입력이 진행을 지배하지 못하게 막는 마지막 방벽.
+        /// 공격력에 반영되는 근력의 상한. 빠르게 뛴다고 무한히 세지지 않는다.
+        /// 속도 하나가 진행을 지배하지 못하게 막는 마지막 방벽.
         /// </summary>
         public float StrengthAttackCap = 40f;
 

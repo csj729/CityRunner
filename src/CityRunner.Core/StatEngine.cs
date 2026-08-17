@@ -36,6 +36,16 @@ namespace CityRunner.Core
             var outcome = new DailyOutcome { Date = day.Date };
             float rawCoins = 0f;
 
+            // 근력은 그날 가장 빠른 세션 하나만 본다. 속도는 그날의 최고 출력을
+            // 대표하는 값이라 세션 수만큼 더할 성질이 아니고, 더하게 두면
+            // "세션을 여러 개로 쪼개 적기"가 곧바로 최적 전략이 된다.
+            float bestSpeed = 0f;
+            float bestSpeedTrust = 0f;
+
+            // 하루치 유산소 부하 예산. 세션들이 나눠 쓰고, 다 쓰면 남은 세션은
+            // 기록만 남고 보상이 없다(§7.3 하루 하드캡).
+            float loadBudget = _b.MaxCardioLoadPerDay;
+
             // 하루에 인정하는 세션 수를 제한한다. 나머지는 기록은 남되 보상은 없다.
             int counted = Math.Min(workouts.Count, _b.MaxWorkoutsPerDay);
 
@@ -43,32 +53,36 @@ namespace CityRunner.Core
             {
                 WorkoutRecord w = workouts[i];
                 float trust = _b.TrustFactor(w.Trust);
+                float minutes = (float)w.Duration.TotalMinutes;
 
-                if (w.Kind == WorkoutKind.Strength)
+                // 지구력은 얼마나 오래·세게 움직였는가(양).
+                float load = Math.Min(minutes * w.Intensity, loadBudget);
+                loadBudget -= load;
+                rawCoins += load * _b.CoinPerCardioMinute * trust;
+                outcome.Endurance += (load / _b.CardioLoadPerEndurance) * trust;
+
+                // 근력은 얼마나 빨랐는가(질). 시간을 곱하지 않는 것이 핵심이다 -
+                // 곱하면 지구력과 같은 것을 두 번 재게 된다(§4.2.1).
+                // 대신 짧은 전력질주 반복이 최적해가 되지 않도록 최소 시간을 요구한다.
+                if (minutes >= _b.MinStrengthSessionMinutes)
                 {
-                    // 웨이트는 코인을 볼륨에 비례해 주지 않는다(비대칭 설계).
-                    // 중량은 어떤 센서로도 검증할 수 없어, 게임 경제와 분리해 둔다.
                     // 타당성 상한을 먼저 씌운다 - 비율 감액만으로는 무제한 입력을 못 막는다.
-                    float volume = Math.Min(w.Volume, _b.MaxVolumePerSession);
-                    rawCoins += _b.CoinPerStrengthSession * trust;
-                    outcome.Strength += (volume / _b.VolumePerStrength) * trust;
-                }
-                else
-                {
-                    float load = Math.Min((float)w.Duration.TotalMinutes * w.Intensity,
-                                          _b.MaxCardioLoadPerSession);
-                    rawCoins += load * _b.CoinPerCardioMinute * trust;
-                    outcome.Endurance += (load / _b.CardioLoadPerEndurance) * trust;
+                    float speed = Math.Min(w.SpeedKmh, _b.MaxSpeedKmh);
+                    if (speed > bestSpeed)
+                    {
+                        bestSpeed = speed;
+                        bestSpeedTrust = trust;
+                    }
                 }
 
                 outcome.HasWorkout = true;
             }
 
-            // 검증 수단이 없는 근력은 하루 단위로 상승폭을 가둔다.
-            if (outcome.Strength > _b.StrengthStatDailyCap)
-                outcome.Strength = _b.StrengthStatDailyCap;
+            float over = bestSpeed - _b.StrengthSpeedFloor;
+            if (over > 0f)
+                outcome.Strength = (over / _b.SpeedPerStrength) * bestSpeedTrust;
 
-            // 볼륨과 무관하게, 그날 운동했다는 사실에 주는 몫(§7.3 Tier0-2).
+            // 부하와 무관하게, 그날 운동했다는 사실에 주는 몫(§7.3 Tier0-2).
             if (outcome.HasWorkout)
                 rawCoins += _b.CoinPerWorkoutDay * _b.TrustFactor(workouts[0].Trust);
 

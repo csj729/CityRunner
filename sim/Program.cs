@@ -102,6 +102,7 @@ namespace CityRunner.Sim
                 avg.Strength += s.Strength;
                 avg.Endurance += s.Endurance;
                 avg.Condition += s.Condition;
+                avg.AvgSpeed += s.AvgSpeed;
                 avg.WorkoutDays += s.WorkoutDays;
                 avg.DietDays += s.DietDays;
                 avg.CapHitDays += s.CapHitDays;
@@ -121,6 +122,7 @@ namespace CityRunner.Sim
             avg.Strength /= Seeds;
             avg.Endurance /= Seeds;
             avg.Condition /= Seeds;
+            avg.AvgSpeed /= Seeds;
             avg.WorkoutDays /= Seeds;
             avg.DietDays /= Seeds;
             avg.CapHitDays /= Seeds;
@@ -141,6 +143,8 @@ namespace CityRunner.Sim
             var progression = new Progression(balance);
             var history = new List<DailyOutcome>();
             var s = new Summary();
+            float speedSum = 0f;
+            int speedCount = 0;
 
             for (int d = 0; d < Days; d++)
             {
@@ -155,6 +159,13 @@ namespace CityRunner.Sim
                 }
 
                 var workouts = source.GetWorkouts(day, day.AddDays(1));
+
+                // 근력이 속도에서 나오므로(§4.2.1) 속도를 눈에 보이게 둔다.
+                for (int i = 0; i < workouts.Count; i++)
+                {
+                    speedSum += workouts[i].SpeedKmh;
+                    speedCount++;
+                }
 
                 DietDay? diet = null;
                 var dietDays = source.GetDietDays(day, day.AddDays(1));
@@ -180,6 +191,7 @@ namespace CityRunner.Sim
                 s.FinalCompliance = OfflineProgress.Compliance(Window(history), balance);
             }
 
+            s.AvgSpeed = speedCount > 0 ? speedSum / speedCount : 0f;
             s.OfflineMultiplier = OfflineProgress.Multiplier(s.FinalCompliance, balance);
             s.OfflinePerDay = OfflineProgress.Accrue(TimeSpan.FromHours(24), Window(history), balance);
 
@@ -197,7 +209,7 @@ namespace CityRunner.Sim
             float earned = s.ActivityCoins + s.OfflineCoins + s.StageCoins;
 
             Console.WriteLine("--- {0} ---", profile);
-            Console.WriteLine("  운동한 날      {0,5:F1}/{1}일", s.WorkoutDays, Days);
+            Console.WriteLine("  운동한 날      {0,5:F1}/{1}일   평균 {2:F1} km/h", s.WorkoutDays, Days, s.AvgSpeed);
             Console.WriteLine("  식단 기록      {0,5:F1}/{1}일", s.DietDays, Days);
             Console.WriteLine("  스탯           근력 {0:F1} / 지구력 {1:F1} / 컨디션 {2:F1}",
                 s.Strength, s.Endurance, s.Condition);
@@ -243,6 +255,7 @@ namespace CityRunner.Sim
         {
             public float ActivityCoins, OfflineCoins, StageCoins, CoinsLeft;
             public float Strength, Endurance, Condition;
+            public float AvgSpeed;
             public float WorkoutDays, DietDays, CapHitDays;
             public float FinalCompliance, OfflineMultiplier, OfflinePerDay;
             public float Stage, GearLevel, Gems, NextGearCost;

@@ -14,11 +14,11 @@ namespace CityRunner.Core
         Lapsed,     // 초반만 하고 방치
 
         /// <summary>
-        /// 워치 없이 폰만 쓰고 유산소만 하는 유저. Consistent 와 같은 빈도로 움직인다.
-        /// 비대칭 설계의 전제 - "웨이트를 전혀 하지 않아도 완주할 수 있다" - 가
-        /// 지켜지는지 확인하는 대조군이다.
+        /// 느리게, 대신 오래 뛰는 유저. Consistent 와 같은 빈도로 움직인다.
+        /// 근력이 속도에서 나오는 설계(§4.2.1)의 전제 - "빠르게 뛰지 못해도
+        /// 완주할 수 있다" - 가 지켜지는지 확인하는 대조군이다.
         /// </summary>
-        CardioOnly,
+        SlowJogger,
 
         /// <summary>
         /// 운동하지 않고 매일 부풀린 수치를 손으로 입력하는 유저.
@@ -58,20 +58,12 @@ namespace CityRunner.Core
 
                 if (rng.NextDouble() < workoutChance)
                 {
-                    // 웨이트와 유산소를 섞는다. 실제 유저도 한쪽만 하지는 않는다.
-                    if (rng.NextDouble() < StrengthShare(profile))
-                    {
-                        float volume = 6000f + (float)rng.NextDouble() * 6000f;
-                        _workouts.Add(WorkoutRecord.Strength(
-                            day.AddHours(19), TimeSpan.FromMinutes(50), volume, PickTrust(rng, profile)));
-                    }
-                    else
-                    {
-                        float intensity = 1.0f + (float)rng.NextDouble();
-                        int minutes = 25 + rng.Next(20);
-                        _workouts.Add(WorkoutRecord.Cardio(
-                            day.AddHours(7), TimeSpan.FromMinutes(minutes), intensity, PickTrust(rng, profile)));
-                    }
+                    float speed = PickSpeed(rng, profile);
+                    int minutes = PickMinutes(rng, profile);
+
+                    _workouts.Add(WorkoutRecord.Cardio(
+                        day.AddHours(7), TimeSpan.FromMinutes(minutes),
+                        speed * minutes / 60f, IntensityOf(speed), PickTrust(rng, profile)));
                 }
 
                 if (rng.NextDouble() < dietChance)
@@ -91,10 +83,12 @@ namespace CityRunner.Core
         /// <summary>매일, 말도 안 되는 수치를, 전부 수동으로 입력한다.</summary>
         private void AddCheatDay(DateTime day)
         {
-            _workouts.Add(WorkoutRecord.Strength(
-                day.AddHours(19), TimeSpan.FromMinutes(90), 25000f, RecordTrust.Manual));
+            // 2시간 동안 시속 30km 로 뛰었다고 적는다. 속도 상한(§7.3)이 실제로
+            // 이 입력을 잘라내는지 확인하는 것이 이 프로필의 목적이다.
             _workouts.Add(WorkoutRecord.Cardio(
-                day.AddHours(7), TimeSpan.FromMinutes(120), 2.0f, RecordTrust.Manual));
+                day.AddHours(19), TimeSpan.FromMinutes(90), 45f, 2.0f, RecordTrust.Manual));
+            _workouts.Add(WorkoutRecord.Cardio(
+                day.AddHours(7), TimeSpan.FromMinutes(120), 60f, 2.0f, RecordTrust.Manual));
 
             _diet.Add(new DietDay
             {
@@ -124,10 +118,32 @@ namespace CityRunner.Core
             return result;
         }
 
-        /// <summary>운동한 날 중 웨이트를 고를 확률. CardioOnly 는 웨이트를 하지 않는다.</summary>
-        private static float StrengthShare(MockProfile p)
+        /// <summary>
+        /// 세션 평균 속도(km/h). SlowJogger 는 걷기보다는 빠르지만 근력이 거의
+        /// 붙지 않는 구간(약 7)에 머문다.
+        /// </summary>
+        private static float PickSpeed(Random rng, MockProfile p)
         {
-            return p == MockProfile.CardioOnly ? 0f : 0.6f;
+            if (p == MockProfile.SlowJogger) return 6.5f + (float)rng.NextDouble();
+            return 9f + (float)rng.NextDouble() * 2f;
+        }
+
+        /// <summary>SlowJogger 는 속도를 시간으로 벌충한다.</summary>
+        private static int PickMinutes(Random rng, MockProfile p)
+        {
+            if (p == MockProfile.SlowJogger) return 40 + rng.Next(20);
+            return 25 + rng.Next(20);
+        }
+
+        /// <summary>
+        /// 강도를 속도에서 끌어낸다. §4.2.2 폴백 2순위가 속도이므로 실제 구현도
+        /// 이렇게 움직인다. 결과적으로 지구력은 거리(양), 근력은 속도(질)를 본다.
+        /// </summary>
+        private static float IntensityOf(float speedKmh)
+        {
+            float i = speedKmh / 7f;
+            if (i < 1f) return 1f;
+            return i > 2f ? 2f : i;
         }
 
         private static float BaseWorkoutChance(MockProfile p)
@@ -135,7 +151,7 @@ namespace CityRunner.Core
             switch (p)
             {
                 case MockProfile.Consistent:
-                case MockProfile.CardioOnly: return 0.65f;
+                case MockProfile.SlowJogger: return 0.65f;
                 case MockProfile.Erratic: return 0.22f;
                 default: return 0.60f; // Lapsed 는 decay 가 깎아 내린다
             }
@@ -146,7 +162,7 @@ namespace CityRunner.Core
             switch (p)
             {
                 case MockProfile.Consistent:
-                case MockProfile.CardioOnly: return 0.90f;
+                case MockProfile.SlowJogger: return 0.90f;
                 case MockProfile.Erratic: return 0.35f;
                 default: return 0.85f;
             }
@@ -158,8 +174,8 @@ namespace CityRunner.Core
         /// </summary>
         private static RecordTrust PickTrust(Random rng, MockProfile p)
         {
-            // 유산소만 하는 유저는 폰이 알아서 기록하므로 사후 입력이 거의 없다.
-            if (p == MockProfile.CardioOnly) return RecordTrust.Automatic;
+            // 워치 없이 폰만 쓰는 유저. 폰이 알아서 기록하므로 사후 입력이 거의 없다.
+            if (p == MockProfile.SlowJogger) return RecordTrust.Automatic;
 
             double auto = p == MockProfile.Consistent ? 0.75 : 0.35;
             return rng.NextDouble() < auto ? RecordTrust.ActivelyRecorded : RecordTrust.Manual;
