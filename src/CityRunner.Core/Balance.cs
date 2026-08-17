@@ -167,7 +167,25 @@ namespace CityRunner.Core
         /// <summary>컨디션 1당 행동 횟수 몇 % 증가(생존 -> 더 오래 때린다).</summary>
         public float ActionsPerCondition = 0.05f;
 
-        public float StageBaseCoin = 8f;
+        /// <summary>
+        /// 스테이지 1 클리어 보상. 8 이었을 때 30스테이지 누적 등비합이 2,400 이 되어
+        /// 스테이지 보상이 코인 수급의 75% 를 차지했다 - 게임 내 루프가 현실 활동보다
+        /// 많은 코인을 만드는 상태라 §3 원칙과 어긋난다.
+        ///
+        /// 기울기(StageCoinGrowth)가 아니라 이 시작값을 낮춰야 한다. 기울기를 낮추면
+        /// 스테이지 보상이 같이 눌리는데, **속도 우위가 코인으로 환산되는 통로가
+        /// 스테이지 보상뿐**이라 속도 차이까지 사라진다(아래 참조).
+        /// </summary>
+        public float StageBaseCoin = 5f;
+
+        /// <summary>
+        /// 스테이지마다 보상이 몇 배씩 오르는가. HP 성장(1.18)보다 낮게 두어 뒤로
+        /// 갈수록 난이도 대비 보상이 줄게 한다.
+        ///
+        /// 1.08 까지 낮춰봤더니 빠른 러너와 느린 러너의 총획득 차이가 1.18배에서
+        /// 1.03배로 무너졌다. 활동 코인은 부하(시간 x 강도) 기반이라 느리게 오래
+        /// 뛰는 쪽이 오히려 더 벌기 때문이다(519 대 445). 그래서 이 값은 유지한다.
+        /// </summary>
         public float StageCoinGrowth = 1.12f;
 
         public int GemEveryNStages = 5;
