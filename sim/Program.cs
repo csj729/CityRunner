@@ -221,8 +221,13 @@ namespace CityRunner.Sim
                 s.ActivityCoins, s.OfflineCoins, s.StageCoins, earned);
             Console.WriteLine("  코인 잔고      {0,5:F0}   (다음 장비 {1:F0})", s.CoinsLeft, s.NextGearCost);
 
-            if (s.CapHitDays > 0.5f)
-                Console.WriteLine("  ! 일일 캡에 평균 {0:F1}일 걸림 - 캡이 낮거나 획득량이 과하다", s.CapHitDays);
+            // 캡은 걸리라고 있는 장치다(§7.3 Tier0-1). 다만 상위 며칠만 잘라야지
+            // 평상시에 걸리면 정직한 유저의 기본 수급을 깎는 것이 된다.
+            float capShare = s.WorkoutDays > 0f ? s.CapHitDays / s.WorkoutDays : 0f;
+            Console.WriteLine("  일일 캡 도달    {0,5:F1}일  (운동일의 {1:P0})", s.CapHitDays, capShare);
+
+            if (capShare > 0.25f)
+                Console.WriteLine("  ! 운동일의 1/4 초과에서 캡에 걸림 - 캡이 낮거나 획득량이 과하다");
 
             // §11 P3 성공 기준: 코인이 남아돌지 않는가.
             if (earned > 0f && s.CoinsLeft > earned * 0.25f)

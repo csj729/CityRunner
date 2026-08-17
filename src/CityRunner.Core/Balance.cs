@@ -45,8 +45,17 @@ namespace CityRunner.Core
         public int CoinProteinGoalBonus = 8;
         public int CoinRegularityBonus = 5;
 
-        /// <summary>하루 코인 상한(§7.3 Tier0-1). 몰아서 입력해도 이득이 없게 한다.</summary>
-        public int DailyCoinCap = 45;
+        /// <summary>
+        /// 하루 코인 상한(§7.3 Tier0-1). 몰아서 입력해도 이득이 없게 한다.
+        ///
+        /// 45 였을 때 어떤 프로필도 한 번도 닿지 않아 사실상 죽은 장치였다. 40 에서
+        /// 꾸준한 유저의 운동일 15% 에 걸린다 - 하루 2세션을 넣은 날이 잘리는 것이라
+        /// "몰아서 입력" 이라는 본래 목적과 정확히 맞는다.
+        ///
+        /// 주의: 이 캡은 치팅 방어가 아니다. 치터는 신뢰도 감액(0.3)에 먼저 눌려
+        /// 하루 22코인에 머물러 캡에 닿지 않는다. 더 내리면 정직한 유저만 깎인다.
+        /// </summary>
+        public int DailyCoinCap = 40;
 
         // --- 입력 타당성 상한(§7.3) ---------------------------------------
         //
